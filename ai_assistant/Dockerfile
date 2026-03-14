@@ -2,6 +2,11 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
+# Required for pip installs from git+https URLs.
+RUN apt-get update \
+	&& apt-get install -y --no-install-recommends git ca-certificates \
+	&& rm -rf /var/lib/apt/lists/*
+
 ARG GOOGLE_CLOUD_PYTHON_LIBRARIES_SOURCE=googleapis/google-cloud-python:main
 ENV GOOGLE_CLOUD_PYTHON_LIBRARIES_SOURCE=${GOOGLE_CLOUD_PYTHON_LIBRARIES_SOURCE}
 

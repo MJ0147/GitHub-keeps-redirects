@@ -15,7 +15,7 @@ if (-not $PROJECT_ID) {
 
 # Fix: Ensure script runs from project root so relative paths (./store, ./frontend) work
 Write-Host "Setting working directory to project root..."
-Set-Location "$PSScriptRoot/../.."
+Set-Location "$PSScriptRoot/.."
 
 # Fix: Ensure ADC quota project matches current project to prevent warnings
 Write-Host "Syncing ADC quota project..."
@@ -25,6 +25,10 @@ Write-Host "------------------------------------------------"
 Write-Host "Deploying Ekioba to Project: $PROJECT_ID"
 Write-Host "Region: $REGION"
 Write-Host "------------------------------------------------"
+
+# 1. Enable APIs
+Write-Host "`n[1/5] Enabling Cloud Run, Artifact Registry, and Cloud Build APIs..."
+gcloud services enable run.googleapis.com artifactregistry.googleapis.com cloudbuild.googleapis.com secretmanager.googleapis.com cloudresourcemanager.googleapis.com
 
 # 1.1 Grant Secret Accessor Roles
 Write-Host "Granting secret accessor permissions to default service account..."

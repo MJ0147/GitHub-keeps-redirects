@@ -75,11 +75,13 @@ jobs:
             --allow-unauthenticated \
             --set-secrets "TON_API_KEY=TON_API_KEY:latest"
 
-      - name: Capture Iyobo URL
-        id: iyobo-url
+      - name: Capture Backend URLs
+        id: backend-urls
         run: |
-          URL=$(gcloud run services describe ekioba-ai-assistant --region "${GCP_REGION}" --format='value(status.url)')
-          echo "iyobo_url=${URL}/chat" >> "$GITHUB_OUTPUT"
+          IYOBO_URL=$(gcloud run services describe ekioba-ai-assistant --region "${GCP_REGION}" --format='value(status.url)')
+          STORE_URL=$(gcloud run services describe ekioba-store --region "${GCP_REGION}" --format='value(status.url)')
+          echo "iyobo_chat_url=${IYOBO_URL}/chat" >> "$GITHUB_OUTPUT"
+          echo "store_api_url=${STORE_URL}/api/products/" >> "$GITHUB_OUTPUT"
 
       - name: Deploy frontend
         run: |
@@ -89,4 +91,4 @@ jobs:
             --project "${GCP_PROJECT_ID}" \
             --platform managed \
             --allow-unauthenticated \
-            --set-env-vars "NEXT_PUBLIC_IYOBO_URL=${{ steps.iyobo-url.outputs.iyobo_url }}"
+            --set-build-env-vars "NEXT_PUBLIC_IYOBO_URL=${{ steps.backend-urls.outputs.iyobo_chat_url }},NEXT_PUBLIC_STORE_PRODUCTS_URL=${{ steps.backend-urls.outputs.store_api_url }}"
