@@ -136,11 +136,11 @@ def process_ton_payment(wallet: str, amount: float,
     }
 
 
-def verify_ton_transaction(tx_hash: str) -> bool:
-    if not tx_hash:
+def verify_ton_transaction(wallet_address: str, tx_hash: str) -> bool:
+    if not tx_hash or not wallet_address:
         return False
 
-    query = {"hash": tx_hash}
+    query = {"address": wallet_address, "hash": tx_hash, "limit": 1}
     if TON_API_KEY:
         query["api_key"] = TON_API_KEY
     endpoint = f"{TON_API_BASE}/getTransactions?{urlencode(query)}"
@@ -179,4 +179,9 @@ def verify_solana_transaction(signature: str) -> bool:
     except RuntimeError:
         return False
 
-    return rpc_response.get("result") is not None
+    result = rpc_response.get("result")
+    if result is None:
+        return False
+    
+    # Ensure the transaction didn't fail on-chain
+    return result.get("meta", {}).get("err") is None

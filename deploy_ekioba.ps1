@@ -140,7 +140,7 @@ $SERVICE_URL = Invoke-GCloudCommand -Args @(
     "--concurrency", "20",
     "--timeout", "300",
     "--set-secrets", "DJANGO_SECRET_KEY=DJANGO_SECRET_KEY:latest,SOLANA_RPC_URL=SOLANA_RPC_URL:latest,TON_API_KEY=TON_API_KEY:latest,COCKROACHDB_STORE_URL=COCKROACHDB_STORE_URL:latest,COCKROACHDB_HOTELS_URL=COCKROACHDB_HOTELS_URL:latest",
-    "--set-env-vars", "NEXT_PUBLIC_IYOBO_URL=/chat,NEXT_PUBLIC_STORE_PRODUCTS_URL=/api/store/products/",
+    "--set-env-vars", "NEXT_PUBLIC_IYOBO_URL=/chat,NEXT_PUBLIC_STORE_PRODUCTS_URL=/api/store/products/,STORE_PAYMENTS_URL=http://127.0.0.1:8000/payments/process/",
     "--format", "value(status.url)"
 ) -FailureMessage "Deployment failed: Cloud Run deploy command did not succeed." -CaptureOutput
 

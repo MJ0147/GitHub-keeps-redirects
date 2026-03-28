@@ -44,7 +44,12 @@ async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise
     if (!res.ok) {
       // Try to parse a structured error from the backend, otherwise throw a generic error
       const errorBody = await res.json().catch(() => ({ message: "An unknown API error occurred" }));
-      throw new Error(errorBody.detail || errorBody.message || `Request failed with status ${res.status}`);
+      const message = errorBody.detail || errorBody.message || errorBody.error || `Request failed with status ${res.status}`;
+      
+      // Create a decorated error object so Checkout.tsx can read the status
+      const error = new Error(message) as any;
+      error.status = res.status;
+      throw error;
     }
 
     return res.json() as Promise<T>;

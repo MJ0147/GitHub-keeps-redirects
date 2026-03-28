@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
 from app.edo_model import EdoLanguageModel
@@ -56,10 +56,19 @@ def health_check() -> dict[str, str]:
 @app.post("/analyze")
 def analyze(payload: AnalyzeRequest) -> dict[str, int | str]:
     words = payload.text.split()
+    word_count = len(words)
+    
+    if word_count < 5:
+        level = "novice"
+    elif word_count < 20:
+        level = "beginner"
+    else:
+        level = "intermediate"
+
     return {
         "model": "baseline-v1",
-        "word_count": len(words),
-        "classification": "beginner" if len(words) < 20 else "intermediate",
+        "word_count": word_count,
+        "classification": level,
     }
 
 
@@ -77,7 +86,7 @@ def vocabulary(category: str | None = None, limit: int = 10) -> dict[str, object
 def translate(payload: TranslateRequest) -> dict[str, str]:
     direction = payload.direction.lower()
     if direction not in {"en_to_edo", "edo_to_en"}:
-        return {"error": "direction must be 'en_to_edo' or 'edo_to_en'"}
+        raise HTTPException(status_code=400, detail="Direction must be 'en_to_edo' or 'edo_to_en'")
     translated = model.translate(payload.text, direction)
     return {"direction": direction, "translated_text": translated}
 

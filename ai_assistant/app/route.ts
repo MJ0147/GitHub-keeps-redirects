@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
-// In a real application, you would import your database client
-// import { cockroachDBClient } from "@/lib/db";
+import { DatabaseSync } from "node:sqlite";
+
+// Initialize SQLite database connection
+// In a production app, move this to a singleton in @/lib/db.ts
+const db = new DatabaseSync(process.env.SQLITE_DB_PATH || "ekioba.db");
 
 // Interface based on typical TonAPI/Blockchain webhook events
 interface TonWebhookPayload {
@@ -62,14 +65,13 @@ export async function POST(request: Request) {
 
     if (account_id && tx_hash) {
       // --- PRODUCTION IMPLEMENTATION ---
-      // This is where you would interact with your database.
-      // const order = await cockroachDBClient.order.findFirst({ where: { tx_hash_pending: tx_hash } });
-      // if (order && order.total_nanotons === value) {
-      //   await cockroachDBClient.order.update({
-      //     where: { id: order.id },
-      //     data: { status: 'COMPLETED', tx_hash_confirmed: tx_hash }
-      //   });
-      // }
+      const query = db.prepare('SELECT id, total_nanotons FROM orders WHERE tx_hash_pending = ? LIMIT 1');
+      const order = query.get(tx_hash) as { id: string, total_nanotons: string } | undefined;
+
+      if (order && order.total_nanotons === value) {
+        const update = db.prepare('UPDATE orders SET status = ?, tx_hash_confirmed = ? WHERE id = ?');
+        update.run('COMPLETED', tx_hash, order.id);
+      }
       
       console.log(`Processing payment for account ${account_id}, Hash: ${tx_hash}`);
     }

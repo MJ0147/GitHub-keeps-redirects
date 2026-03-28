@@ -131,6 +131,12 @@ def process_payment(request):
     except (TypeError, ValueError):
         return JsonResponse({"error": "amount must be numeric."}, status=400)
 
+    # SECURITY: Recalculate and verify the amount against the product price.
+    # Do not trust the client-provided 'amount' for the final verification.
+    if amount < float(product.price):
+        return JsonResponse(
+            {"error": f"Insufficient payment amount. Product '{product.name}' costs {product.price}."}, status=400)
+
     chain_label = (
         "TON"
         if chain == "ton"
@@ -182,73 +188,7 @@ def process_payment(request):
     return JsonResponse({"status": "verified", "chain": chain,
                         "payment_id": payment.id, "tx": tx})
 
-
 @csrf_exempt
-def pay_ton(request):
-    if request.method != "POST":
-        return JsonResponse({"error": "Only POST is supported."}, status=405)
-
-    try:
-        data = json.loads(request.body.decode("utf-8"))
-    except (json.JSONDecodeError, UnicodeDecodeError):
-        return JsonResponse({"error": "Invalid JSON payload."}, status=400)
-
-    product_id = data.get("productId")
-    tx_hash = data.get("txHash")
-
-    if not product_id or not tx_hash:
-        return JsonResponse(
-            {"error": "productId and txHash are required."}, status=400)
-
-    try:
-        product = Product.objects.get(id=product_id)
-    except Product.DoesNotExist:
-        return JsonResponse({"error": "Product not found."}, status=404)
-
-    verified = verify_ton_transaction(str(tx_hash))
-    payment = Payment.objects.create(
-        product=product,
-        tx_hash=str(tx_hash),
-        blockchain="TON",
-        status="confirmed" if verified else "pending",
-    )
-
-    return JsonResponse({"status": payment.status, "tx": payment.tx_hash})
-
-
-@csrf_exempt
-def pay_solana(request):
-    if request.method != "POST":
-        return JsonResponse({"error": "Only POST is supported."}, status=405)
-
-    try:
-        data = json.loads(request.body.decode("utf-8"))
-    except (json.JSONDecodeError, UnicodeDecodeError):
-        return JsonResponse({"error": "Invalid JSON payload."}, status=400)
-
-    product_id = data.get("productId")
-    tx_hash = data.get("txHash")
-
-    if not product_id or not tx_hash:
-        return JsonResponse(
-            {"error": "productId and txHash are required."}, status=400)
-
-    try:
-        product = Product.objects.get(id=product_id)
-    except Product.DoesNotExist:
-        return JsonResponse({"error": "Product not found."}, status=404)
-
-    verified = verify_solana_transaction(str(tx_hash))
-    payment = Payment.objects.create(
-        product=product,
-        tx_hash=str(tx_hash),
-        blockchain="Solana",
-        status="confirmed" if verified else "pending",
-    )
-
-    return JsonResponse({"status": payment.status, "tx": payment.tx_hash})
-
-
 def token_info(request):
     if idia_service is None:
         return JsonResponse(

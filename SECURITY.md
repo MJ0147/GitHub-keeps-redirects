@@ -3,9 +3,9 @@
 ## Recommended Security Structure
 
 ```text
-[ Next.js Frontend ] --> HTTPS --> [ Django/FastAPI Backend ] --> TLS --> [ CockroachDB ]
-         |                                |                                |
-   Auth via JWT/OAuth2              Secrets via GCP SM              RBAC + TLS certs
+[ Next.js Frontend ] --> HTTPS --> [ Django/FastAPI Backend ] --> Local I/O --> [ SQLite ]
+         |                                |                                    |
+   Auth via JWT/OAuth2              Secrets via GCP SM                  File Permissions
 ```
 
 ## Control Layers
@@ -28,20 +28,20 @@
   - `TON_API_KEY`
   - `SOLANA_RPC_URL`
   - `DJANGO_SECRET_KEY`
-  - `COCKROACHDB_STORE_URL`
-  - `COCKROACHDB_HOTELS_URL`
+  - `SQLITE_DB_PATH`
+  - `TELEGRAM_BOT_TOKEN`
 - Grant least-privilege access via `roles/secretmanager.secretAccessor` to runtime service accounts only.
+  - Ensure the database file resides in a persistent volume if using ephemeral containers (e.g., Cloud Run with GCS fuse).
 
-### 4. Backend to Database (TLS)
-- Use CockroachDB with TLS enabled in production.
-- Use `sslmode=require` or stronger (`verify-full` where certificates are managed).
-- Restrict network access to database endpoints by private networking/VPC rules.
+### 4. Backend to Database (Local I/O)
+- Ensure the database file is stored in a directory with restricted read/write permissions.
+- For high-concurrency environments, enable WAL (Write-Ahead Logging) mode.
+- Regularly back up the `.db` file to secure object storage (e.g., Google Cloud Storage).
 
-### 5. Database Security (RBAC + Certificates)
-- Use dedicated DB users per service (`store`, `hotels`, analytics, etc.).
-- Grant minimum required privileges to each role.
-- Rotate DB credentials and certificates regularly.
-- Enable audit logging and monitor unusual query patterns.
+### 5. Database Security (File Permissions)
+- Restrict access to the database file to the service runtime user only (e.g., `chmod 600`).
+- Use SQLite's `STRICT` mode in table definitions to enforce data integrity.
+- Consider using SQLCipher if at-rest encryption is required beyond filesystem-level encryption.
 
 ## Service Hardening Checklist
 
@@ -49,13 +49,12 @@
 - [ ] JWT/OAuth2 validation middleware enabled for protected endpoints.
 - [ ] CORS restricted to approved frontend domains.
 - [ ] Secrets loaded from GCP Secret Manager in Cloud Run.
-- [ ] CockroachDB TLS enabled with non-insecure mode.
-- [ ] Per-service DB credentials and RBAC policy in place.
+- [ ] SQLite database file permissions hardened.
 - [ ] CI/CD does not print secrets in logs.
 - [ ] Security headers enabled (HSTS, X-Content-Type-Options, X-Frame-Options, CSP).
 
 ## EKIOBA Implementation Notes
 
-- `store` and `hotels` already support env-based DB URLs via `COCKROACHDB_URL`; set this to TLS-enabled URLs in production.
-- Keep local Docker development with insecure settings isolated from production.
+- Move from `COCKROACHDB_URL` (or `MYSQL_URL`) to `SQLITE_DB_PATH` in environment configurations.
+- Local development uses a local file; production deployments should mount a persistent disk to maintain data across container restarts.
 - For Iyobo and blockchain endpoints, apply token-based auth before enabling public write actions.

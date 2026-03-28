@@ -16,6 +16,14 @@ Services:
 - `ai_assistant` on `http://localhost:8005`
 - `frontend` on `http://localhost:3000`
 
+### Local Frontend Development (Standalone)
+
+To run only the frontend locally (useful for UI testing) while pointing to local backend services:
+
+```powershell
+./run_frontend_local.ps1
+```
+
 ## CI/CD (GitHub Actions)
 
 Current workflows:

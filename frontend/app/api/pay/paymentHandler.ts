@@ -30,24 +30,30 @@ export async function handlePayment(request: Request, chain: "solana" | "ton") {
   const verifierUrl = process.env.STORE_PAYMENTS_URL;
 
   if (!verifierUrl) {
-    console.warn(`STORE_PAYMENTS_URL not set. Running ${chain} payment in mock mode.`);
-    return NextResponse.json({
-      status: "accepted",
-      chain: chain,
-      mode: "mock",
-      message: "Set STORE_PAYMENTS_URL to enable backend verification.",
-      tx: payload.proof,
-    });
+    console.error(`STORE_PAYMENTS_URL not set. Cannot verify ${chain} payment.`);
+    return NextResponse.json({ error: "Payment verification configuration missing." }, { status: 500 });
   }
 
   try {
     const response = await fetch(verifierUrl, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { 
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+      },
       body: JSON.stringify({ ...payload, chain }),
       cache: "no-store",
     });
-    const data = await response.json();
+
+    // Safely parse JSON error details, falling back to status text for 502/503 HTML pages
+    let data;
+    const contentType = response.headers.get("content-type");
+    if (contentType && contentType.includes("application/json")) {
+      data = await response.json();
+    } else {
+      data = { error: `Upstream service error: ${response.statusText}` };
+    }
+
     return NextResponse.json(data, { status: response.status });
   } catch (error) {
     console.error(`Failed to forward payment verification to store service for chain: ${chain}`, error);
